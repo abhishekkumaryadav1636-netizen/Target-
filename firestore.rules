@@ -1,0 +1,188 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true &&
+         request.auth.token.email == 'abhishekkumaryadav1636@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidCourse(data) {
+      return data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+             data.subtitle is string && data.subtitle.size() >= 2 && data.subtitle.size() <= 160 &&
+             data.board is string && data.board.size() >= 2 && data.board.size() <= 40 &&
+             data.className is string && data.className.size() >= 2 && data.className.size() <= 40 &&
+             data.batchYear is string && data.batchYear.size() >= 2 && data.batchYear.size() <= 20 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 40 &&
+             data.priceInr is int && data.priceInr >= 0 && data.priceInr <= 100000 &&
+             data.originalPriceInr is int && data.originalPriceInr >= 0 && data.originalPriceInr <= 100000 &&
+             data.freeBatch is bool &&
+             data.thumbnailUrl is string && data.thumbnailUrl.size() <= 200000 &&
+             data.fallbackKey is string && data.fallbackKey.size() >= 2 && data.fallbackKey.size() <= 60 &&
+             data.instructorName is string && data.instructorName.size() >= 2 && data.instructorName.size() <= 80 &&
+             data.subjectsSummary is string && data.subjectsSummary.size() >= 2 && data.subjectsSummary.size() <= 140 &&
+             data.lessonCount is int && data.lessonCount >= 0 && data.lessonCount <= 2000 &&
+             data.durationLabel is string && data.durationLabel.size() >= 2 && data.durationLabel.size() <= 40 &&
+             data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+             data.catalogActive is bool &&
+             data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 20)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.preferredBoard is string && data.preferredBoard.size() >= 1 && data.preferredBoard.size() <= 40 &&
+             data.preferredClass is string && data.preferredClass.size() >= 1 && data.preferredClass.size() <= 40 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidFavorite(data, courseId) {
+      return data.courseId is string && data.courseId == courseId &&
+             data.addedAt is timestamp && data.addedAt <= request.time;
+    }
+
+    function isValidEnrollment(data, courseId) {
+      return data.courseId is string && data.courseId == courseId &&
+             data.courseTitle is string && data.courseTitle.size() >= 1 && data.courseTitle.size() <= 100 &&
+             data.progressPercent is int && data.progressPercent >= 0 && data.progressPercent <= 100 &&
+             data.enrolledAt is timestamp && data.enrolledAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Read-only admin verification docs (no client writes allowed)
+    match /admins/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Shared course catalog: students read active courses; admins manage courses & thumbnails
+    match /courses/{courseId} {
+      allow get: if isSignedIn() && isValidId(courseId) && (existing().catalogActive == true || isAdmin());
+      allow list: if isSignedIn() && (existing().catalogActive == true || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(courseId) &&
+                       isAdmin() &&
+                       incoming().updatedBy == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'title', 'subtitle', 'board', 'className', 'batchYear', 'category',
+                         'priceInr', 'originalPriceInr', 'freeBatch', 'thumbnailUrl', 'fallbackKey',
+                         'instructorName', 'subjectsSummary', 'lessonCount', 'durationLabel',
+                         'sortOrder', 'catalogActive', 'updatedBy', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'title', 'subtitle', 'board', 'className', 'batchYear', 'category',
+                         'priceInr', 'originalPriceInr', 'freeBatch', 'thumbnailUrl', 'fallbackKey',
+                         'instructorName', 'subjectsSummary', 'lessonCount', 'durationLabel',
+                         'sortOrder', 'catalogActive', 'updatedBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCourse(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(courseId) &&
+                       isValidCourse(incoming()) &&
+                       isAdmin() &&
+                       incoming().updatedBy == request.auth.uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'subtitle', 'board', 'className', 'batchYear', 'category',
+                         'priceInr', 'originalPriceInr', 'freeBatch', 'thumbnailUrl', 'fallbackKey',
+                         'instructorName', 'subjectsSummary', 'lessonCount', 'durationLabel',
+                         'sortOrder', 'catalogActive', 'updatedBy', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(courseId) && isAdmin();
+    }
+
+    // User-scoped profile, favorites, and enrollments
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'preferredBoard', 'preferredClass', 'createdAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'phoneNumber', 'photoUrl', 'preferredBoard', 'preferredClass', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'phoneNumber', 'photoUrl', 'preferredBoard', 'preferredClass', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /favorites/{courseId} {
+        allow get: if isOwner(userId) && isValidId(courseId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(courseId) &&
+                         incoming().keys().hasAll(['courseId', 'addedAt']) &&
+                         incoming().keys().hasOnly(['courseId', 'addedAt']) &&
+                         isValidFavorite(incoming(), courseId);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(courseId);
+      }
+
+      match /enrollments/{courseId} {
+        allow get: if isOwner(userId) && isValidId(courseId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(courseId) &&
+                         incoming().keys().hasAll(['courseId', 'courseTitle', 'progressPercent', 'enrolledAt']) &&
+                         incoming().keys().hasOnly(['courseId', 'courseTitle', 'progressPercent', 'enrolledAt', 'updatedAt']) &&
+                         isValidEnrollment(incoming(), courseId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(courseId) &&
+                         isValidEnrollment(incoming(), courseId) &&
+                         incoming().courseId == existing().courseId &&
+                         incoming().enrolledAt == existing().enrolledAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'courseTitle', 'progressPercent', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(courseId);
+      }
+    }
+  }
+}

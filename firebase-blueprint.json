@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "Course": {
+      "title": "Course",
+      "description": "A Target Bootcamp course batch with custom 1:1.2 thumbnail URL, board, class, batch year, and pricing.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Course display title" },
+        "subtitle": { "type": "string", "description": "Batch tagline and description" },
+        "board": { "type": "string", "description": "Education board (UP Board, Bihar Board, CUET, Foundation)" },
+        "className": { "type": "string", "description": "Class level (Class 9..12, UG Entrance, All Classes)" },
+        "batchYear": { "type": "string", "description": "Batch year label e.g. 2026-27" },
+        "category": { "type": "string", "description": "Filter category" },
+        "priceInr": { "type": "integer", "description": "Current course price in INR (0 if free)" },
+        "originalPriceInr": { "type": "integer", "description": "Original MRP in INR" },
+        "freeBatch": { "type": "boolean", "description": "Whether the course has a FREE badge" },
+        "thumbnailUrl": { "type": "string", "description": "Uploaded or hosted thumbnail URL / data URI / preset URI" },
+        "fallbackKey": { "type": "string", "description": "Course-specific fallback drawable key" },
+        "instructorName": { "type": "string", "description": "Lead faculty name" },
+        "subjectsSummary": { "type": "string", "description": "Key subjects covered" },
+        "lessonCount": { "type": "integer", "description": "Number of video lectures and notes" },
+        "durationLabel": { "type": "string", "description": "Batch duration string" },
+        "sortOrder": { "type": "integer", "description": "Display ordering index" },
+        "catalogActive": { "type": "boolean", "description": "Whether the course is active in student catalog" },
+        "updatedBy": { "type": "string", "description": "Admin user ID who last updated the course" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on last update" }
+      },
+      "required": [
+        "title", "subtitle", "board", "className", "batchYear", "category",
+        "priceInr", "originalPriceInr", "freeBatch", "thumbnailUrl", "fallbackKey",
+        "instructorName", "subjectsSummary", "lessonCount", "durationLabel",
+        "sortOrder", "catalogActive", "updatedBy", "createdAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated student or admin profile preferences.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "phoneNumber": { "type": "string", "description": "Optional verified mobile number" },
+        "photoUrl": { "type": "string", "description": "Optional avatar URL" },
+        "preferredBoard": { "type": "string", "description": "Preferred education board" },
+        "preferredClass": { "type": "string", "description": "Preferred class" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update" }
+      },
+      "required": ["userId", "displayName", "preferredBoard", "preferredClass", "createdAt"]
+    },
+    "FavoriteCourse": {
+      "title": "FavoriteCourse",
+      "description": "A user's favourited course reference.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string", "description": "ID of favourited course" },
+        "addedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when favourited" }
+      },
+      "required": ["courseId", "addedAt"]
+    },
+    "CourseEnrollment": {
+      "title": "CourseEnrollment",
+      "description": "A user's enrolled course record.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string", "description": "Enrolled course ID" },
+        "courseTitle": { "type": "string", "description": "Course title snapshot" },
+        "progressPercent": { "type": "integer", "description": "Completion percentage 0..100" },
+        "enrolledAt": { "type": "string", "format": "date-time", "description": "Server timestamp on enrollment" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on progress update" }
+      },
+      "required": ["courseId", "courseTitle", "progressPercent", "enrolledAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Server-managed admin access document.",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "description": "Admin role label" }
+      },
+      "required": ["role"]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Target Bootcamp course catalog with admin-managed thumbnail URLs."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Per-user profile and study preferences."
+    },
+    "/users/{userId}/favorites/{courseId}": {
+      "schema": { "$ref": "#/entities/FavoriteCourse" },
+      "description": "User's favourite courses."
+    },
+    "/users/{userId}/enrollments/{courseId}": {
+      "schema": { "$ref": "#/entities/CourseEnrollment" },
+      "description": "User's enrolled courses."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Read-only admin membership lookup."
+    }
+  }
+}

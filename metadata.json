@@ -1,0 +1,6 @@
+{
+  "name": "TARGET BOOTCAMP",
+  "description": "Indian educational coaching platform for UP Board, Bihar Board (Classes 9-12), and CUET courses with dynamic course thumbnails, favourites, and an admin thumbnail management panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

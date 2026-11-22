@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">TARGET BOOTCAMP</string>
+    <string name="auth_tagline">UP Board • Bihar Board • CUET UG 2026-27</string>
+    <string name="mobile_login_title">Login With Mobile Number</string>
+    <string name="mobile_login_subtitle">Enter your 10-digit mobile number to receive a 6-digit OTP and access your batches.</string>
+    <string name="mobile_number_label">Mobile Number</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="enter_otp_label">Enter 6-Digit OTP</string>
+    <string name="verify_and_login">Verify &amp; Login</string>
+    <string name="sign_in_with_google">Sign in with Google (Admin / Quick)</string>
+    <string name="auth_sync_note">Powered by live cloud sync across your devices</string>
+</resources>
